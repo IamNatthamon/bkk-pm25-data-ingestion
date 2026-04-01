@@ -24,34 +24,29 @@ Production-grade PM2.5 forecasting system for Bangkok, Thailand using **ST-UNN**
 ```
 bkk-pm25-data-ingestion/
 ├── config/                     # Configuration (config/gold.py)
-├── docs/                        # Documentation (ORGANIZATION.md)
+├── docs/                       # Documentation (ORGANIZATION, QUICKSTART, DATA_ARCHITECTURE, …)
 ├── notebooks/
-│   ├── exploration/             # EDA, ingestion, visualization
-│   │   ├── bangkok_environmental_ingestion.ipynb   # Step 1: API ingestion (Bronze → Silver)
-│   │   └── visualization.ipynb                     # EDA, data quality, spatial/temporal analysis
-│   ├── pipelines/
-│   │   └── preprocessing_pipeline.ipynb           # Step 2: Feature engineering (Silver → Gold)
-│   └── modeling/
-│       ├── backfill_airquality_2023.ipynb
-│       └── model_training.ipynb                    # Step 3: ST-UNN + baselines training & forecasting
+│   ├── exploration/            # EDA, ingestion, visualization, explore_gold_airquality.ipynb
+│   ├── pipelines/              # preprocessing_pipeline.ipynb (+ optional backup copy)
+│   └── modeling/               # model_training, backfill_airquality_2023, …
 ├── scripts/
-│   ├── ingestion/               # Backfill scripts (backfill_5years.py, run_backfill_aq_2023*.py, etc.)
-│   ├── run_silver_to_gold.py
-│   └── ...
-├── src/
-│   ├── gold/                    # Gold layer (features.py, loader.py, pipeline.py)
-│   ├── silver_to_gold/
-│   └── utils/
+│   ├── pipeline/               # run_ingestion.py, run_bronze_to_silver.py, run_silver_to_gold.py
+│   ├── ingestion/              # AQ backfills (backfill_5years.py, run_backfill_aq_2023*.py, …)
+│   ├── merge_wind_uv_to_silver.py, silver_firms_daily_aggregate.py, create_gold_airquality.py, …
+│   ├── run_silver_to_gold.py   # Silver → Gold (daily) runner
+│   └── …
+├── src/                        # Library code (gold/, silver_to_gold/, validation/, …)
+├── run_ingestion.py            # Thin wrappers → scripts/pipeline/ (same for bronze→silver, silver→gold)
+├── run_bronze_to_silver.py
+├── run_silver_to_gold.py
 ├── requirements.txt
 ├── README.md
 ├── data/
-│   ├── bronze/openmeteo_weather/           # Raw JSON.gz (immutable)
-│   ├── silver/openmeteo_weather/           # Parquet (year=YYYY/month=MM/)
-│   ├── silver/openmeteo_airquality/
-│   ├── stations/bangkok_stations.parquet
-│   └── gold/model_ready/                   # train/val/test Parquet + manifest
+│   ├── bronze/openmeteo_weather/
+│   ├── silver/…
+│   ├── stations/bangkok_stations.parquet, stations.csv (legacy CSV)
+│   └── gold/model_ready/
 ├── models/
-├── plots/
 ├── checkpoints/
 └── logs/
 ```

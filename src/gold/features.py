@@ -1,13 +1,25 @@
 """
-Feature Engineering for PM2.5 Forecasting
+Feature Engineering for PM2.5 Forecasting — DEPRECATED
 
-Creates features from raw air quality data for ML model training.
+Use src.silver_to_gold.transforms instead.
 """
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import polars as pl
+
+from src.utils.logger import get_logger
+
+log = get_logger(__name__)
+
+warnings.warn(
+    "src.gold.features is deprecated. Use src.silver_to_gold.transforms instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 def add_lag_features(
@@ -16,12 +28,8 @@ def add_lag_features(
     lag_hours: list[int],
     group_by: str = "stationID",
 ) -> pl.DataFrame:
-    """
-    Add lag features for time series forecasting.
-    
-    Creates features like pm2_5_lag_1h, pm2_5_lag_24h, etc.
-    """
-    print(f"  📊 Adding lag features: {lag_hours}", flush=True)
+    """Add lag features for time series forecasting (pm2_5_lag_1h, etc.)."""
+    log.debug("features.lag", lags=lag_hours)
     
     lag_exprs = []
     for lag in lag_hours:
@@ -43,12 +51,8 @@ def add_rolling_features(
     windows: list[int],
     group_by: str = "stationID",
 ) -> pl.DataFrame:
-    """
-    Add rolling window statistics.
-    
-    Creates features like pm2_5_rolling_mean_24h, pm2_5_rolling_std_24h, etc.
-    """
-    print(f"  📊 Adding rolling features: {windows}", flush=True)
+    """Add rolling window statistics (mean, std, min, max per window)."""
+    log.debug("features.rolling", windows=windows)
     
     rolling_exprs = []
     for window in windows:
@@ -92,12 +96,8 @@ def add_temporal_features(
     df: pl.DataFrame,
     timestamp_col: str = "timestamp_utc",
 ) -> pl.DataFrame:
-    """
-    Add temporal features from timestamp.
-    
-    Creates: hour, day_of_week, month, is_weekend, cyclical encodings.
-    """
-    print(f"  📊 Adding temporal features", flush=True)
+    """Add temporal features: hour, day_of_week, month, is_weekend, cyclical encodings."""
+    log.debug("features.temporal")
     
     df = df.with_columns([
         # Extract components
@@ -138,12 +138,8 @@ def add_target_variable(
     forecast_horizon: int,
     group_by: str = "stationID",
 ) -> pl.DataFrame:
-    """
-    Create target variable for forecasting.
-    
-    Target = PM2.5 value at t+forecast_horizon
-    """
-    print(f"  🎯 Adding target: {target_col} at t+{forecast_horizon}h", flush=True)
+    """Create target variable: PM2.5 value at t+forecast_horizon."""
+    log.debug("features.target", col=target_col, horizon=forecast_horizon)
     
     df = df.with_columns(
         pl.col(target_col)
@@ -160,8 +156,8 @@ def add_rate_of_change(
     target_col: str,
     group_by: str = "stationID",
 ) -> pl.DataFrame:
-    """Add rate of change features"""
-    print(f"  📊 Adding rate of change features", flush=True)
+    """Add rate of change features: 1h diff, 24h diff, 1h pct change."""
+    log.debug("features.rate_of_change", col=target_col)
     
     df = df.with_columns([
         # 1-hour change
@@ -187,8 +183,8 @@ def interpolate_missing(
     method: str = "linear",
     group_by: str = "stationID",
 ) -> pl.DataFrame:
-    """Interpolate missing values within each station"""
-    print(f"  🔧 Interpolating missing values ({method})", flush=True)
+    """Interpolate missing values within each station group."""
+    log.debug("features.interpolate", method=method, cols=columns)
     
     for col in columns:
         if col in df.columns:
@@ -200,10 +196,11 @@ def interpolate_missing(
 
 
 if __name__ == "__main__":
-    # Test feature engineering
-    print("Testing feature engineering functions...")
-    
-    # Create sample data
+    from src.utils.logger import setup_logging
+
+    setup_logging()
+    log.info("features.smoke_test.start")
+
     df = pl.DataFrame({
         "stationID": ["A"] * 100,
         "timestamp_utc": pl.datetime_range(
@@ -211,17 +208,14 @@ if __name__ == "__main__":
             end=pl.datetime(2023, 1, 5),
             interval="1h",
             time_zone="UTC",
-            eager=True
+            eager=True,
         )[:100],
         "pm2_5_ugm3": np.random.rand(100) * 50 + 20,
     })
-    
-    print(f"\nOriginal shape: {df.shape}")
-    
+
     df = add_lag_features(df, "pm2_5_ugm3", [1, 6, 24])
     df = add_rolling_features(df, "pm2_5_ugm3", [6, 24])
     df = add_temporal_features(df)
     df = add_target_variable(df, "pm2_5_ugm3", 24)
-    
-    print(f"After features: {df.shape}")
-    print(f"Columns: {df.columns}")
+
+    log.info("features.smoke_test.complete", shape=list(df.shape), columns=df.columns)

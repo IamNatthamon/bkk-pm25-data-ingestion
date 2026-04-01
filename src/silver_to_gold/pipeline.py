@@ -48,6 +48,7 @@ def run_silver_to_gold_pipeline(config: PipelineConfig) -> dict[str, Path]:
 
     if airquality_lazy is not None:
         log.info("pipeline.stage", stage="aggregate_airquality")
+        # Silver AQ: some files use long names (nitrogen_dioxide_ugm3), others short (no2_ugm3); coalesce both
         aq_daily = (
             airquality_lazy.with_columns(pl.col("timestamp_utc").dt.date().alias("date"))
             .group_by(["date", "stationID"])
@@ -56,10 +57,10 @@ def run_silver_to_gold_pipeline(config: PipelineConfig) -> dict[str, Path]:
                 pl.col("lon").first(),
                 pl.col("pm2_5_ugm3").mean().alias("pm2_5_mean"),
                 pl.col("pm10_ugm3").mean().alias("pm10_mean"),
-                pl.col("no2_ugm3").mean().alias("no2_mean"),
-                pl.col("o3_ugm3").mean().alias("o3_mean"),
-                pl.col("so2_ugm3").mean().alias("so2_mean"),
-                pl.col("co_ugm3").mean().alias("co_mean"),
+                pl.coalesce(pl.col("nitrogen_dioxide_ugm3"), pl.col("no2_ugm3")).mean().alias("no2_mean"),
+                pl.coalesce(pl.col("ozone_ugm3"), pl.col("o3_ugm3")).mean().alias("o3_mean"),
+                pl.coalesce(pl.col("sulphur_dioxide_ugm3"), pl.col("so2_ugm3")).mean().alias("so2_mean"),
+                pl.coalesce(pl.col("carbon_monoxide_ugm3"), pl.col("co_ugm3")).mean().alias("co_mean"),
             )
             .sort(["stationID", "date"])
         )
